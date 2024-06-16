@@ -5,6 +5,51 @@ on:
       - '**'
 
 jobs:
+  build:
+    strategy:
+      matrix:
+        target: [catalyst, macos]
+        include:
+          - target: catalyst
+            os: macos-latest
+            arch: arm64
+            env:
+              CC: clang
+              CFLAGS: '-O2 -g -target arm64-apple-ios-macabi -miphoneos-version-min=13.1 -flto -fomit-frame-pointer -fno-stack-protector -pipe'
+              LDFLAGS: '-Wl,-dead_strip_dylibs'
+            generator: 'Unix Makefiles'
+
+          - target: catalyst
+            os: macos-latest
+            arch: x86_64
+            env:
+              CC: clang
+              CFLAGS: '-O2 -g -target x86_64-apple-ios-macabi -miphoneos-version-min=13.1 -flto -fomit-frame-pointer -fno-stack-protector -pipe'
+              LDFLAGS: '-Wl,-dead_strip_dylibs'
+            generator: Unix Makefiles
+    runs-on: ${{ matrix.os }}
+    steps:
+      shell: bash
+      run: |
+        cmake -B ${{github.workspace}}/build \
+          -G "Unix Makefiles" \
+          -D CMAKE_INSTALL_PREFIX=${{github.workspace}}/dist/catalyst/arm64 \
+          -D CMAKE_VERBOSE_MAKEFILE=true \
+          -D BUILD_SHARED_LIBS=ON \
+          -D USE_APPLICATION_SERVICES=OFF \
+          -D USE_IOKIT=OFF \
+          -D USE_APPKIT=OFF \
+          -D BUILD_DEMO=OFF
+        
+        cmake --build ${{github.workspace}}/build \
+          --parallel 2 \
+          --config RelWithDebInfo \
+          --clean-first
+        
+        cmake --install ${{github.workspace}}/build --config RelWithDebInfo
+
+
+
   catalyst-arm64:
     runs-on: macos-latest
 
@@ -171,39 +216,9 @@ jobs:
           submodules: true
 
       - name: Setup
-        shell: bash
-        run: |
-          sudo rm -Rf /etc/apt/sources.list.d
-          sudo bash -c 'source /etc/lsb-release && echo "
-          deb [arch=amd64,i386] http://us.archive.ubuntu.com/ubuntu ${DISTRIB_CODENAME} main universe
-          deb [arch=amd64,i386] http://us.archive.ubuntu.com/ubuntu ${DISTRIB_CODENAME}-updates main universe
-          deb [arch=amd64,i386] http://us.archive.ubuntu.com/ubuntu ${DISTRIB_CODENAME}-backports main universe
-          # This only seems to be required on GitHub images
-          deb [arch=amd64,i386] https://ppa.launchpadcontent.net/ubuntu-toolchain-r/test/ubuntu ${DISTRIB_CODENAME} main
-
-          deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports ${DISTRIB_CODENAME} main universe
-          deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports ${DISTRIB_CODENAME}-updates main universe
-          deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports ${DISTRIB_CODENAME}-backports main universe
-          # This only seems to be required on GitHub images
-          deb [arch=arm64,armhf] https://ppa.launchpadcontent.net/ubuntu-toolchain-r/test/ubuntu ${DISTRIB_CODENAME} main
-          " > /etc/apt/sources.list'
-
-          sudo dpkg --add-architecture armhf
-          sudo apt-get update -m
-
-          sudo apt-get install \
-            binutils-arm-linux-gnueabihf \
-            gcc-arm-linux-gnueabihf
-
-          sudo apt-get install \
-            libx11-dev:armhf \
-            libxtst-dev:armhf \
-            libxt-dev:armhf \
-            libxinerama-dev:armhf \
-            libx11-xcb-dev:armhf \
-            libxkbcommon-dev:armhf \
-            libxkbcommon-x11-dev:armhf \
-            libxkbfile-dev:armhf
+        shell: sh
+        run:
+          sudo .github/scripts/setup-linux-arm.sh
 
       - name: Compile
         env:
@@ -244,39 +259,9 @@ jobs:
           submodules: true
 
       - name: Setup
-        shell: bash
-        run: |
-          sudo rm -Rf /etc/apt/sources.list.d/*
-          sudo bash -c 'source /etc/lsb-release && echo "
-          deb [arch=amd64,i386] http://us.archive.ubuntu.com/ubuntu ${DISTRIB_CODENAME} main universe
-          deb [arch=amd64,i386] http://us.archive.ubuntu.com/ubuntu ${DISTRIB_CODENAME}-updates main universe
-          deb [arch=amd64,i386] http://us.archive.ubuntu.com/ubuntu ${DISTRIB_CODENAME}-backports main universe
-          # This only seems to be required on GitHub images
-          deb [arch=amd64,i386] https://ppa.launchpadcontent.net/ubuntu-toolchain-r/test/ubuntu ${DISTRIB_CODENAME} main
-
-          deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports ${DISTRIB_CODENAME} main universe
-          deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports ${DISTRIB_CODENAME}-updates main universe
-          deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports ${DISTRIB_CODENAME}-backports main universe
-          # This only seems to be required on GitHub images
-          deb [arch=arm64,armhf] https://ppa.launchpadcontent.net/ubuntu-toolchain-r/test/ubuntu ${DISTRIB_CODENAME} main
-          " > /etc/apt/sources.list'
-
-          sudo dpkg --add-architecture arm64
-          sudo apt-get update -m
-
-          sudo apt-get install \
-            binutils-aarch64-linux-gnu \
-            gcc-aarch64-linux-gnu
-
-          sudo apt-get install \
-            libx11-dev:arm64 \
-            libxtst-dev:arm64 \
-            libxt-dev:arm64 \
-            libxinerama-dev:arm64 \
-            libx11-xcb-dev:arm64 \
-            libxkbcommon-dev:arm64 \
-            libxkbcommon-x11-dev:arm64 \
-            libxkbfile-dev:arm64
+        shell: sh
+        run:
+          sudo .github/scripts/setup-linux-arm.sh
 
       - name: Compile
         env:
@@ -317,33 +302,9 @@ jobs:
           submodules: true
 
       - name: Setup
-        shell: bash
-        run: |
-          sudo rm -Rf /etc/apt/sources.list.d
-          sudo bash -c 'source /etc/lsb-release && echo "
-          deb [arch=amd64,i386] http://us.archive.ubuntu.com/ubuntu ${DISTRIB_CODENAME} main universe
-          deb [arch=amd64,i386] http://us.archive.ubuntu.com/ubuntu ${DISTRIB_CODENAME}-updates main universe
-          deb [arch=amd64,i386] http://us.archive.ubuntu.com/ubuntu ${DISTRIB_CODENAME}-backports main universe
-          # This only seems to be required on GitHub images
-          deb [arch=amd64,i386] https://ppa.launchpadcontent.net/ubuntu-toolchain-r/test/ubuntu ${DISTRIB_CODENAME} main
-          " > /etc/apt/sources.list'
-
-          sudo dpkg --add-architecture i386
-          sudo apt-get update -m
-
-          sudo apt-get install \
-            binutils-i686-linux-gnu \
-            gcc-i686-linux-gnu
-
-          sudo apt-get install \
-            libx11-dev:i386 \
-            libxtst-dev:i386 \
-            libxt-dev:i386 \
-            libxinerama-dev:i386 \
-            libx11-xcb-dev:i386 \
-            libxkbcommon-dev:i386 \
-            libxkbcommon-x11-dev:i386 \
-            libxkbfile-dev:i386
+        shell: sh
+        run:
+          sudo .github/scripts/setup-linux-x86.sh
 
       - name: Compile
         env:
@@ -384,17 +345,10 @@ jobs:
           submodules: true
 
       - name: Setup
-        shell: bash
-        run: |
-          sudo apt-get install \
-            libx11-dev:amd64 \
-            libxtst-dev:amd64 \
-            libxt-dev:amd64 \
-            libxinerama-dev:amd64 \
-            libx11-xcb-dev:amd64 \
-            libxkbcommon-dev:amd64 \
-            libxkbcommon-x11-dev:amd64 \
-            libxkbfile-dev:amd64
+        shell: sh
+        run:
+          sudo setup-linux-x86_64.sh
+
 
       - name: Compile
         env:
