@@ -335,8 +335,6 @@ UIOHOOK_API int hook_run() {
         }
     }
 
-    // Signal the debugger check thread to stop and wait for it
-    g_keep_checking = false;
     if (debugger_thread != NULL) {
         WaitForSingleObject(debugger_thread, INFINITE);
         CloseHandle(debugger_thread);
